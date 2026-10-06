@@ -125,6 +125,19 @@ Be clear about what that proves: `SHA256SUMS.txt` travels in the same
 repository as the page, so whoever could change one could change the other. It
 tells you the file you hold is the file that was published, nothing more.
 
+One check does not share that weakness. Each release is signed, through
+[Sigstore](https://www.sigstore.dev/), by the GitHub Actions run that built it
+— a signature the repository's contents cannot forge. With the
+[GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify ~/Downloads/mypassphrase.html -R seQRets/My-Passphrase
+```
+
+It names the workflow, the commit and the tag the file came from. Releases
+before this was added have no attestation; for those, the checksum is what
+there is.
+
 ### Step 2: Go offline for anything that matters
 
 For a passphrase that will guard something important: **go offline first.**
