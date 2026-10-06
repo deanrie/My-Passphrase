@@ -2,8 +2,9 @@
 /* Recompute the SHA-256 pins for index.html's inline scripts, rewrite the CSP
    meta tag in place, and regenerate SHA256SUMS.txt.
  *
- * Ported from the sister project, seQRets/My-Seed-Phrase, which has pinned its
- * scripts this way since v1.6; the two pages share one rule set.
+ * SHARED VERBATIM between seQRets/My-Seed-Phrase and seQRets/My-Passphrase:
+ * the two pages follow one rule set, and each repository's CI fails if its
+ * copy differs from the sister's. Fix a bug here, then copy the file across.
  *
  * RUN THIS AFTER ANY EDIT TO index.html. The page pins each inline <script> by
  * hash instead of allowing 'unsafe-inline', so a single changed character
@@ -39,9 +40,9 @@ if (!Buffer.from(src, 'utf8').equals(bytes)) die('index.html is not valid UTF-8'
 
 /* ---- inline scripts ---------------------------------------------------- */
 // An HTML comment hides everything up to its "-->", so a literal "<script>"
-// written inside one (say, in a note explaining this very policy) is not a
-// block. Treating it as one would hash the wrong bytes and pin a hash the
-// browser never matches — and the page would quietly do nothing.
+// written inside one is not a block. Treating it as one would hash the wrong
+// bytes and pin a hash the browser never matches — and the page would quietly
+// do nothing, which is exactly the failure this script exists to prevent.
 const comments = [...src.matchAll(/<!--[\s\S]*?-->/g)].map(m => [m.index, m.index + m[0].length]);
 const inComment = i => comments.some(([a, b]) => i >= a && i < b);
 const blocks = [...src.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(b => !inComment(b.index));
@@ -87,9 +88,7 @@ const updated = src.slice(0, meta.index) + meta[1] + next + meta[3]
 
 /* ---- write, or report -------------------------------------------------- */
 const pageHash = createHash('sha256').update(Buffer.from(updated, 'utf8')).digest('hex');
-// Both names for the same bytes: the repo file, and the release asset README
-// tells people to download — so `shasum -c` works against either.
-const sums = `${pageHash}  index.html\n${pageHash}  mypassphrase.html\n`;
+const sums = `${pageHash}  index.html\n`;
 const sumsNow = existsSync(SUMS) ? readFileSync(SUMS, 'utf8') : '';
 const cspStale = updated !== src, sumsStale = sums !== sumsNow;
 

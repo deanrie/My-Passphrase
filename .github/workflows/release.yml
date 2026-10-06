@@ -38,10 +38,14 @@ jobs:
         run: |
           mkdir -p dist
           cp index.html dist/mypassphrase.html
-          cp SHA256SUMS.txt dist/SHA256SUMS.txt
-          cd dist
-          sha256sum -c --ignore-missing SHA256SUMS.txt
-          echo "SHA256=$(sha256sum mypassphrase.html | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          # SHA256SUMS.txt names index.html; the release copy names the asset,
+          # so `sha256sum -c` works in a Downloads folder.
+          want=$(awk '{print $1}' SHA256SUMS.txt)
+          got=$(sha256sum dist/mypassphrase.html | cut -d' ' -f1)
+          [ "$want" = "$got" ] || { echo "::error::SHA256SUMS.txt ($want) does not match index.html ($got)"; exit 1; }
+          printf '%s  mypassphrase.html\n' "$got" > dist/SHA256SUMS.txt
+          (cd dist && sha256sum -c SHA256SUMS.txt)
+          echo "SHA256=$got" >> "$GITHUB_ENV"
 
       - name: Write the release notes
         env:

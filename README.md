@@ -114,7 +114,8 @@ one is honest; reading it is what checks that, and it is written to be read.
 
 Cloning the repo works too: `index.html` there is the same file, named for the
 web server that has to serve it at the domain root. `SHA256SUMS.txt` beside it
-records the SHA-256 under both names, so one command checks either copy:
+records its SHA-256; the release asset is the same bytes under its download
+name, so one value checks either. With a clone:
 
 ```bash
 shasum -a 256 -c SHA256SUMS.txt   # macOS;  sha256sum -c SHA256SUMS.txt on Linux
