@@ -93,11 +93,17 @@
     -webkit-mask-image:radial-gradient(ellipse 70% 100% at 50% 0%,#000 25%,transparent 75%);
     mask-image:radial-gradient(ellipse 70% 100% at 50% 0%,#000 25%,transparent 75%)}
   /* Light from above: a wide amber glow over the header with a warmer core,
-     in place of the old ember in the corner. */
-  body::after{content:'';position:absolute;top:-420px;left:50%;transform:translateX(-50%);
-    width:min(1400px,160vw);height:900px;pointer-events:none;z-index:0;
-    background:radial-gradient(ellipse 45% 50% at 50% 50%,var(--glow),transparent 70%),
-               radial-gradient(ellipse 25% 30% at 58% 56%,var(--glow2),transparent 70%)}
+     in place of the old ember in the corner. Drawn on a page-wide box with the
+     ellipse radii given directly, not on a centred min(1400px,160vw) box: that
+     box is 512px wide on a 320px phone and made the page scrollable sideways
+     wherever overflow-x:hidden on <body> is not honoured (iOS Safari). Same
+     light, same pixels, nothing past the edge — the sister project's fix. */
+  body::after{content:'';position:absolute;top:-420px;left:0;right:0;height:900px;
+    pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse min(630px,72vw) 450px at 50% 450px,
+                 var(--glow),transparent 70%),
+               radial-gradient(ellipse min(350px,40vw) 270px at calc(50% + min(112px,12.8vw)) 504px,
+                 var(--glow2),transparent 70%)}
   .topbar{position:fixed;top:0;left:0;right:0;height:3px;
     background:linear-gradient(90deg,#E8710A,var(--orange) 30%,var(--gold) 60%,var(--orange));z-index:10}
   main{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:3.2rem 1.5rem 4rem}

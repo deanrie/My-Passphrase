@@ -51,6 +51,16 @@ jobs:
             console.log("CSP ok:", csp.replace(/\x27sha256-[^\x27]+\x27/g, "<pin>"));
           '
 
+      # 53 checks in headless Chrome: CSP pins recomputed, zero requests, RNG
+      # uniformity, every pool, the meter's ceilings, encode/decode against an
+      # independent encoder, QR, frame guard, layout. Chrome is preinstalled.
+      - name: verify.js in headless Chrome
+        env:
+          CHROME: /usr/bin/google-chrome
+        run: |
+          "$CHROME" --version
+          node verify.js
+
       # The two embedded wordlists are re-derived from their upstream files
       # (EFF; google-10000-english with the stated filter) and compared byte
       # for byte, so "derived from" is a recipe that is checked, not a claim.

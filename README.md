@@ -192,6 +192,30 @@ writes nothing and reports whether the pins and the sums are current; CI runs
 this on every push and pull request. The same script, and the same rule, as the
 sister project [seQRets/My-Seed-Phrase](https://github.com/seQRets/My-Seed-Phrase).
 
+### Checking a change
+
+```bash
+node verify.js
+```
+
+`verify.js` drives the page in headless Chrome and asserts on it: 53 checks,
+no dependencies, Node 22+ and Chrome (set `CHROME` if the binary is somewhere
+unusual). It recomputes the CSP pins itself rather than trusting the script that
+wrote them, loads the page over `file://` and over http and fails on any CSP
+violation, exception or request other than the page itself; measures
+`randomIndex()` for uniformity (chi-square, p < .001) at the list sizes the page
+draws from and confirms it never lands past the end; generates from every pool
+and checks membership and alphabet; confirms a generated secret is counted
+exactly and born blurred, and that typed words zxcvbn overrates are still held
+under the list ceiling; checks that 💪 adds what it says; round-trips all seven
+encodings, five of them against Node's own encoder and the other two against
+published vectors; opens the QR and checks it is blurred until revealed; frames
+the page from another origin and checks the tool is withheld; and checks nothing
+scrolls sideways at 320, 390 and 1440px. Every check was confirmed to fail
+against deliberately broken code before being kept: a biased `randomIndex`, a
+meter without its ceiling, a removed frame gate, a stale CSP pin and an
+unblurred secret each trip at least one. CI runs it on every push.
+
 ## Credits
 
 - Generator and crack-time code adapted from
