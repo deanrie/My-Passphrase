@@ -209,9 +209,16 @@ sister project [seQRets/My-Seed-Phrase](https://github.com/seQRets/My-Seed-Phras
 - QR encoding by
   [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
   (Kazuhiko Arase, MIT), embedded verbatim
-- [EFF large wordlist](https://www.eff.org/dice) (CC-BY 3.0)
+- [EFF large wordlist](https://www.eff.org/dice) (CC-BY 3.0), embedded
+  verbatim and in order (7,776 words; SHA-256 of the list, one word per line,
+  `6d557f0693958fb5e650b68b5bee585eb82cf4da32965505c789e924743bc522`)
 - Common-English list derived from
-  [first20hours/google-10000-english](https://github.com/first20hours/google-10000-english)
+  [first20hours/google-10000-english](https://github.com/first20hours/google-10000-english):
+  `google-10000-english-usa-no-swears.txt`, keeping the words of 4 to 9
+  lowercase letters, deduplicated and sorted — 7,459 words, SHA-256
+  `57970da208e266b4df7c52f7599138c10930602a936571c70cbc108aade43de3`.
+  `node scripts/check-wordlists.mjs` re-derives both lists from their upstream
+  files and fails if either embedded list differs; CI runs it on every push
 - Design adapted from the sister project,
   [seQRets/My-Seed-Phrase](https://github.com/seQRets/My-Seed-Phrase)
 

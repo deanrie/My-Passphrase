@@ -51,6 +51,12 @@ jobs:
             console.log("CSP ok:", csp.replace(/\x27sha256-[^\x27]+\x27/g, "<pin>"));
           '
 
+      # The two embedded wordlists are re-derived from their upstream files
+      # (EFF; google-10000-english with the stated filter) and compared byte
+      # for byte, so "derived from" is a recipe that is checked, not a claim.
+      - name: Embedded wordlists match their stated sources
+        run: node scripts/check-wordlists.mjs
+
       # The pin script is shared verbatim with the sister project; a fix that
       # lands in one must land in the other. Compare against the sister's main.
       - name: update-csp-hashes.mjs is identical to the sister project's copy
