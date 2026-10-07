@@ -587,6 +587,16 @@
      edit cannot hand a working tool back to a hostile wrapper. No link in the
      notice on purpose: a frame can be sandboxed so that links cannot escape it,
      and an address you type yourself is the one that cannot lie. */
+  /* Print, or "Save as PDF", writes the screen to a file: the passphrase, its
+     encodings, a decoded string, a QR. Blank all of it on paper. */
+  @media print{
+    #passphrase,#encin,#convin,#convout,#decout,#qrcanvas,.qrbox{visibility:hidden !important}
+    .qrveil{display:none !important}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+    html{scroll-behavior:auto}
+  }
   #framed{display:none}
   html[data-framed] .topbar,html[data-framed] main{display:none}
   html[data-framed] #framed{display:block;position:relative;z-index:1;max-width:34rem;margin:14vh auto 0;
@@ -774,7 +784,7 @@ try{if(window.top!==window.self)document.documentElement.setAttribute("data-fram
       by any program running on your computer, and apps that keep a clipboard history save
       their own copy. Paste it where it belongs. If you stay on this page and copy nothing
       else, the clipboard is cleared after 60 seconds; the page never reads it.</div>
-    <div class="status" id="st"></div>
+    <div class="status" id="st" role="status" aria-live="polite"></div>
   </div>
 
   <div class="card" id="convcard">
