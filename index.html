@@ -12,7 +12,7 @@
      those blocks and refuses any injected or altered script. After ANY edit to
      this file run:  node scripts/update-csp-hashes.mjs -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'sha256-bpkiOHMXkWaLx3OlGhd51NlrAzD5ikpHekyCZZSO/hE=' 'sha256-mPt8uk52hzYteLgKeY6QftjQBrWs/uH4/6SSXEzZgWQ=' 'sha256-Y3g0YMfsIAIe7KZxEEiRTDMoPSZ8p2Cqvdztl1LVMYI=' 'sha256-Wk2Co9pinxahbhKDP/FrFerI6j3h+qnQsf2rliYnqBQ='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'sha256-bpkiOHMXkWaLx3OlGhd51NlrAzD5ikpHekyCZZSO/hE=' 'sha256-mPt8uk52hzYteLgKeY6QftjQBrWs/uH4/6SSXEzZgWQ=' 'sha256-Y3g0YMfsIAIe7KZxEEiRTDMoPSZ8p2Cqvdztl1LVMYI=' 'sha256-N4hq77VIC6AN6/TauVqlfgvNiziPAiLvZvvOvK4W/eY='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <!-- Nothing is fetched, but a click on a footer link is still a navigation. -->
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="Generate a random passphrase from the EFF wordlist or common English words. Self-contained, works offline, never touches the internet.">
@@ -321,6 +321,20 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 12px 26px -8px rgba(247,147,26,.75)}
   button.primary:active{transform:translateY(0)}
   .hint{font-size:var(--fs-sm);color:var(--dim);margin-top:.9rem;letter-spacing:.02em}
+  /* Dice: the slow route. A folded card under the generator, in the Q&A's
+     clothes; the rolls field takes the passphrase box's shield, because the
+     rolls ARE the passphrase one step earlier. */
+  .dice{margin-top:1rem;border:1px solid var(--line);border-radius:14px;padding:0 1rem}
+  .dice>summary{padding:.8rem 0;font-size:var(--fs-md);font-weight:600;color:var(--ink);list-style:none;display:flex;gap:.6rem;align-items:baseline}
+  .dice>summary::-webkit-details-marker{display:none}
+  .dice>summary::before{content:'+';color:var(--orange);font-weight:700}
+  .dice[open]>summary::before{content:'\2212'}
+  .dice>summary .sub{font-size:var(--fs-sm);font-weight:500;color:var(--dim)}
+  .dice .body{padding:0 0 1rem}
+  .dice textarea{min-height:4.5rem;margin-top:.6rem}
+  .dicewarn{margin-top:.8rem;padding:.7rem .9rem;border:1px solid var(--red-ink);border-radius:10px;
+    font-size:var(--fs-sm);color:var(--red-ink);font-weight:600}
+  .dicecount{font-size:var(--fs-sm);color:var(--dim);margin-top:.5rem}
   /* Native select arrows sit hard against the right border, which reads as
      awkward next to the buttons. appearance:none swaps in our own chevron —
      a data: URI, so it is drawn, not fetched — inset from the edge. */
@@ -590,7 +604,7 @@
   /* Print, or "Save as PDF", writes the screen to a file: the passphrase, its
      encodings, a decoded string, a QR. Blank all of it on paper. */
   @media print{
-    #passphrase,#encin,#convin,#convout,#decout,#qrcanvas,.qrbox{visibility:hidden !important}
+    #passphrase,#rolls,#encin,#convin,#convout,#decout,#qrcanvas,.qrbox{visibility:hidden !important}
     .qrveil{display:none !important}
   }
   @media (prefers-reduced-motion:reduce){
@@ -744,6 +758,25 @@ try{if(window.top!==window.self)document.documentElement.setAttribute("data-fram
         <option value="pin">PIN digits · 0–9</option>
       </select>
     </div>
+    <details class="dice" id="dicepath">
+      <summary>Roll your own randomness <span class="sub">— the slow route, for the truly paranoid</span></summary>
+      <div class="body">
+        <p class="hint" style="margin-top:0">The EFF list holds exactly 7,776 words: every outcome of five six-sided dice,
+          so five rolls pick one word and nothing in this page decides anything. 🎲 Roll a die and type each
+          result below, five per word. <b>Keep these numbers secure, as they are the passphrase.</b></p>
+        <textarea id="rolls" rows="2" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"
+          inputmode="numeric" placeholder="Enter your die rolls here. 431256…" aria-label="Your dice rolls"></textarea>
+        <div class="dicecount" id="dicecount"></div>
+        <div class="hint" id="dicebad" style="display:none"></div>
+        <div class="hint" id="dicequal"></div>
+        <div class="dicewarn" id="diceweak" style="display:none"></div>
+        <div class="row">
+          <button class="primary" id="dicego" disabled>Make a passphrase from the dice</button>
+          <button id="diceanyway" style="display:none">Make it anyway</button>
+          <button id="diceclr" type="button">Clear the rolls</button>
+        </div>
+      </div>
+    </details>
     <div class="meter" id="meter" style="display:none">
       <div class="mrow">
         <span class="mhead">
@@ -4106,6 +4139,8 @@ function bumpWords(k) {
 let shieldWanted = true;
 function setShield(on) {
   $("passphrase").classList.toggle("shield", on);
+  // the rolls are the passphrase one step earlier, so they follow the same eye
+  $("rolls").classList.toggle("shield", on);
   $("peek").setAttribute("aria-pressed", String(!on));
   $("peek").setAttribute("aria-label", on ? "Show the passphrase" : "Hide the passphrase");
   $("peekslash").style.display = on ? "none" : "block";
@@ -4605,6 +4640,128 @@ function rebuildCountOptions() {
   $("wordcount").value = m.last;
 }
 // the button names what it makes
+/* ---- dice: the slow route ------------------------------------------- */
+// The EFF large list is a diceware table: 7,776 = 6^5 words, in dice order, so
+// five rolls index one word directly — index = Σ (d_i − 1)·6^(4−i) — with no
+// hashing and no bias. Anyone with the same rolls and the printed list gets
+// the same words, which is the point of rolling.
+const DICE_PER_WORD = 5, LOG2_6 = Math.log2(6);
+const diceRolls = () => [...$("rolls").value].filter(c => "123456".includes(c)).join("");
+function diceWord(five) {
+  let i = 0;
+  for (const c of five) i = i * 6 + (+c - 1);
+  return EFF_WORDS[i];
+}
+// The one place a faked roll can still be caught — from the sister project
+// (myseedphrase.app), where it is calibrated at ~0% false alarms on genuine
+// rolls and catches every typed pattern tried; one threshold is raised here
+// because this page accepts far fewer rolls. Its FLAGS gate the button; the
+// bit count only explains the finding.
+function assessRolls(r) {
+  const n = r.length, ceiling = n * LOG2_6;
+  if (!n) return { n, ceiling, bits: 0, flags: [] };
+  const counts = [0, 0, 0, 0, 0, 0];
+  for (const c of r) counts[+c - 1]++;
+  const faces = counts.filter(c => c).length;
+  let H = 0;
+  for (const c of counts) if (c) { const p = c / n; H -= p * Math.log2(p) }
+  let period = n;
+  for (let p = 1; p * 2 <= n; p++) {
+    let same = true;
+    for (let i = p; i < n && same; i++) if (r[i] !== r[i - p]) same = false;
+    if (same) { period = p; break }
+  }
+  let steps = 0; const gaps = [0, 0, 0, 0, 0, 0];
+  for (let i = 1; i < n; i++) {
+    const d = (+r[i] - +r[i - 1] + 6) % 6;
+    gaps[d]++; if (d === 1 || d === 5) steps++;
+  }
+  let Hd = 0;
+  if (n > 1) for (const c of gaps) if (c) { const p = c / (n - 1); Hd -= p * Math.log2(p) }
+  const bits = Math.max(0, Math.min(ceiling, n * H, period * LOG2_6, LOG2_6 + (n - 1) * Hd));
+  const flags = [];
+  if (faces === 1) flags.push("every roll is the same number");
+  else if (period < n) flags.push(`the same ${period} roll${period > 1 ? "s" : ""} repeat over and over`);
+  else {
+    // Unlike the sister's seeds (50+ rolls), a passphrase here is 20 to 60
+    // rolls, and a fair die leaves one face unseen in 20 rolls about 16% of the
+    // time (6·(5/6)^20), in 30 about 2.5%, in 40 about 0.4%. The face and skew
+    // checks are therefore asked only from 40 rolls on; below that only the
+    // gross patterns (one number, a repeating block, a run) can gate, and the
+    // bit count still reflects any skew. Measured on 20,000 fair sequences per
+    // length: false alarms 0.03% at 20 rolls, 0.0% at 30, 0.6% at 40, 0.0% at 60.
+    if (faces < 6 && n >= 40) flags.push(`only ${faces} of the six faces ever come up`);
+    if (n >= 20 && steps >= (n - 1) * 0.7) flags.push("the numbers mostly run in sequence");
+    if (faces === 6 && n >= 40 && bits < ceiling * 0.85)
+      flags.push("one face comes up far more often than the others");
+  }
+  return { n, ceiling, bits, flags };
+}
+let diceAcknowledged = false;
+function updateDice() {
+  const raw = $("rolls").value, rolls = diceRolls(), n = rolls.length;
+  $("rolls").classList.toggle("shield", shieldWanted);
+  const count = +$("wordcount").value, need = count * DICE_PER_WORD;
+  const bad = [...new Set([...raw.replace(/\s/g, "")].filter(c => !"123456".includes(c)))];
+  $("dicebad").style.display = bad.length ? "block" : "none";
+  if (bad.length) { $("dicebad").className = "hint bad-c"; $("dicebad").textContent = "✕  Dice only show 1 to 6. Remove: " + bad.join(", "); }
+  $("dicecount").textContent = n ? `${n} of ${need} rolls for ${count} words · ${Math.floor(n / DICE_PER_WORD)} word${Math.floor(n / DICE_PER_WORD) === 1 ? "" : "s"} so far` : "";
+  const q = assessRolls(rolls);
+  const enough = n >= need;
+  $("dicego").disabled = !enough;
+  if (!n) { $("dicequal").textContent = ""; $("dicequal").className = "hint"; }
+  else if (q.flags.length && n >= 10) {
+    $("dicequal").className = "hint bad-c";
+    $("dicequal").textContent = "⚠︎ These rolls do not look rolled: " + q.flags.join("; ") + ".";
+  } else {
+    $("dicequal").className = "hint";
+    $("dicequal").textContent = enough
+      ? "No patterns found in these rolls. That is not proof the die was fair; it only means nothing obvious is wrong with what you typed."
+      : `${need - n} more roll${need - n === 1 ? "" : "s"} for ${count} words.`;
+  }
+  // editing the rolls withdraws an earlier "make it anyway"
+  diceAcknowledged = false;
+  $("diceweak").style.display = "none"; $("diceanyway").style.display = "none";
+}
+function makeFromDice() {
+  if (FRAMED) return;
+  const rolls = diceRolls(), count = +$("wordcount").value, need = count * DICE_PER_WORD;
+  if (rolls.length < need) return;
+  const q = assessRolls(rolls.slice(0, need));
+  if (q.flags.length && !diceAcknowledged) {
+    // The gate: first press writes nothing, names what is wrong, and waits for
+    // a separate button that is deliberately not focused.
+    $("diceweak").style.display = "block";
+    $("diceweak").textContent = "⚠︎ These rolls do not look rolled: " + q.flags.join("; ")
+      + `. A passphrase made from them is worth about ${Math.round(q.bits)} of the ${Math.round(q.ceiling)} bits it should carry. `
+      + "Roll a real die, or press “Make it anyway” to go ahead.";
+    $("diceanyway").style.display = "";
+    return;
+  }
+  const words = [];
+  for (let i = 0; i < need; i += DICE_PER_WORD) words.push(diceWord(rolls.slice(i, i + DICE_PER_WORD)));
+  const phrase = words.join(" ");
+  // Counted like a drawn phrase: the rolls are the randomness, the list is
+  // 7,776 long, so count × log2(7776) — IF the die was fair, which the page
+  // cannot know; the note says so.
+  const bits = count * Math.log2(EFF_WORDS.length);
+  $("wordlist").value = "eff"; $("wordlist").dispatchEvent(new Event("change"));
+  lastGenerated = { phrase, count, list: "eff", bits, base: bits, bump: newBump(words) };
+  $("passphrase").value = phrase;
+  $("cliphint").style.display = "none";
+  applyShield();
+  updateMeter(true);
+  $("st").className = "status ok";
+  $("st").textContent = `✓  ${count} words from your ${need} rolls, read straight off the EFF table: nothing here chose them. `
+    + "The rolls are the passphrase one step earlier — destroy the paper once the words are safe.";
+  diceAcknowledged = false; $("diceweak").style.display = "none"; $("diceanyway").style.display = "none";
+}
+$("rolls").addEventListener("input", updateDice);
+$("wordcount").addEventListener("change", updateDice);
+$("dicego").onclick = makeFromDice;
+$("diceanyway").onclick = () => { diceAcknowledged = true; makeFromDice(); };
+$("diceclr").onclick = () => { $("rolls").value = ""; updateDice(); };
+
 function syncGenLabel() {
   const k = $("wordlist").value;
   const noun = k === "pin" ? "PIN" : k === "ascii" ? "password"

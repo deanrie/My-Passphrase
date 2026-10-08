@@ -25,6 +25,8 @@
  *   - 💪 adds exactly what it says it adds, from the same RNG;
  *   - encode/decode round-trip in all seven alphabets, with the five simple
  *     ones cross-checked against Node rather than against the page itself;
+ *   - dice: the words a roll string produces are exactly what the EFF
+ *     file's own dice column names, faked rolls are gated, the count is exact;
  *   - the QR opens blurred; the frame guard withholds the tool; nothing
  *     scrolls sideways between 320px and 1440px.
  *
@@ -355,6 +357,59 @@ async function behaviourChecks(browser, url, lists) {
     chk('the QR opens, drawn, and blurred until revealed',
         qr.open.shown && qr.open.w > 1 && qr.open.pressed === 'false' && qr.open.blurred, JSON.stringify(qr.open));
     chk('closing the QR wipes the drawing', !qr.closed.shown && qr.closed.w <= 1, `canvas ${qr.closed.w}px`);
+
+    section('dice');
+    // Independent of the page: the EFF file itself pairs every word with its
+    // five dice digits (column one). Fetch it once; the words the page makes
+    // from a roll string must be exactly the ones that table names.
+    let effText = null;
+    for (let attempt = 0; attempt < 3 && !effText; attempt++) {
+      try { effText = await (await fetch('https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt')).text(); }
+      catch { await new Promise(r => setTimeout(r, 1500)); }
+    }
+    const byDice = new Map((effText || '').trim().split('\n').map(l => l.split('\t')).map(([d, w]) => [d, w]));
+    const ROLLS30 = '631612226566523656256214626535';           // 6 words, genuine-looking
+    const wantWords = effText ? ROLLS30.match(/.{5}/g).map(d => byDice.get(d)).join(' ') : null;
+    const dice = await p.evaluate(`
+      const $ = id => document.getElementById(id);
+      $('dicepath').open = true;
+      $('wordlist').value = 'eff'; $('wordlist').dispatchEvent(new Event('change'));
+      $('wordcount').value = '6'; $('wordcount').dispatchEvent(new Event('change'));
+      const out = {};
+      $('rolls').value = '12345'; $('rolls').dispatchEvent(new Event('input'));
+      out.short = { disabled: $('dicego').disabled, count: $('dicecount').textContent, qual: $('dicequal').textContent };
+      $('rolls').value = '1234x56 7'; $('rolls').dispatchEvent(new Event('input'));
+      out.bad = $('dicebad').textContent;
+      $('rolls').value = ${JSON.stringify(ROLLS30)}; $('rolls').dispatchEvent(new Event('input'));
+      out.ready = { disabled: $('dicego').disabled, qual: $('dicequal').textContent };
+      $('dicego').click(); await new Promise(r => setTimeout(r, 50));
+      out.made = { v: $('passphrase').value, mval: $('mval').textContent, shield: $('passphrase').classList.contains('shield'),
+                   st: $('st').textContent, bumpEnabled: !$('bump').disabled };
+      // faked rolls: first press writes nothing and offers a second button
+      $('rolls').value = '444444444444444444444444444444'; $('rolls').dispatchEvent(new Event('input'));
+      $('passphrase').value = ''; $('passphrase').dispatchEvent(new Event('input'));
+      $('dicego').click(); await new Promise(r => setTimeout(r, 50));
+      out.faked = { v: $('passphrase').value, warn: $('diceweak').style.display, warnText: $('diceweak').textContent,
+                    anyway: $('diceanyway').style.display, focused: document.activeElement === $('diceanyway') };
+      $('diceanyway').click(); await new Promise(r => setTimeout(r, 50));
+      out.anyway = { v: $('passphrase').value };
+      $('rolls').value = '12121212121212121212121212121212'; $('rolls').dispatchEvent(new Event('input'));
+      out.alternating = $('dicequal').textContent;
+      $('diceclr').click(); out.cleared = $('rolls').value === '' && $('dicecount').textContent === '';
+      return out;`);
+    chk('too few rolls: button disabled, the count says how many more', dice.short.disabled && /5 of 30/.test(dice.short.count) && /25 more/.test(dice.short.qual), dice.short.count);
+    chk('a stray character is named', /Remove: x, 7/.test(dice.bad), dice.bad);
+    chk('30 genuine-looking rolls: enabled, no pattern flagged', !dice.ready.disabled && /No patterns found/.test(dice.ready.qual));
+    chk('the six words are exactly what the EFF dice table names for those rolls (independent of the page)',
+        wantWords !== null && dice.made.v === wantWords, wantWords === null ? 'could not fetch eff_large_wordlist.txt' : `${dice.made.v.replace(/[a-z]/g, '•')} vs table`);
+    chk('a dice passphrase is counted exactly (78 bits, no "est."), born blurred, and 💪 is offered',
+        dice.made.mval === '78 bits' && dice.made.shield && dice.made.bumpEnabled && /from your 30 rolls/.test(dice.made.st), dice.made.mval);
+    chk('faked rolls (all 4s): first press writes nothing, warns, offers an unfocused "Make it anyway"',
+        dice.faked.v === '' && dice.faked.warn === 'block' && /every roll is the same number/.test(dice.faked.warnText)
+        && dice.faked.anyway !== 'none' && !dice.faked.focused, JSON.stringify({ ...dice.faked, warnText: dice.faked.warnText.slice(0, 50) }));
+    chk('"Make it anyway" then makes it', dice.anyway.v.split(' ').length === 6);
+    chk('alternating rolls are flagged as a repeating block', /the same 2 rolls repeat/.test(dice.alternating), dice.alternating);
+    chk('Clear the rolls empties the field and the count', dice.cleared);
 
     section('layout');
     for (const w of [320, 390, 1440]) {

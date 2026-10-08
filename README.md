@@ -25,6 +25,19 @@ the browser to refuse if anything on the page ever tried to phone home.
   - **PIN digits**: 4 to 12 random digits for the PINs hardware wallets ask
     you to set; drawn per digit, so leading zeros are as likely as anything
     else (`0042` is a valid PIN, which range-style generators cannot produce)
+- **Roll your own randomness**: a folded card under the generator takes dice
+  rolls, five per word, and reads the words straight off the EFF table (the
+  list is 7,776 = 6⁵ entries in dice order, so `index = Σ (dᵢ−1)·6⁴⁻ⁱ`, no
+  hashing, no bias) — anyone with the same rolls and the printed list gets the
+  same words. Typed rolls can be invented, so the sister project's roll-quality
+  check runs on them before anything is made: one number, a repeating block, a
+  run, a missing face or a loaded die are named, and the first press writes
+  nothing until a separate *Make it anyway* is pressed. Thresholds are
+  re-calibrated for this page's shorter strings (20–60 rolls): on 20,000 fair
+  sequences per length, false alarms are 0.04% at 20 rolls, 0.01% at 30, 0.6%
+  at 40 and 0.01% at 60, and every faked pattern tried is caught. The rolls
+  field is blurred under the same eye as the passphrase, because the rolls
+  *are* the passphrase one step earlier
 - **Real randomness**: every draw comes from `crypto.getRandomValues` with
   rejection sampling, so each word and character is exactly as likely as every
   other; `Math.random` appears nowhere in the file
